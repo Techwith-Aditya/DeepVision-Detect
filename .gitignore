@@ -1,5 +1,4 @@
 # Ignore Python virtual environment
 myenv/
-*.mp4
 *.pyc
 __pycache__/
