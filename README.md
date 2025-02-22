@@ -2,6 +2,7 @@
 
 ## Project Overview  
 This project processes an input video and detects human faces using **MTCNN (Multi-Task Cascaded Convolutional Networks)**. The detected faces are highlighted, and the processed video is saved for further analysis.  
+This project has been successfully deployed on an NVIDIA DGX A100 installed at my college, leveraging its powerful computational capabilities for efficient face detection.
 
 ## Applications  
 This project can be used in various real-world scenarios, such as:  
@@ -18,9 +19,10 @@ This project can be used in various real-world scenarios, such as:
 - Displays real-time face detection while processing.  
 
 ## Technologies Used  
-- **Python** – Programming language for script execution.  
-- **OpenCV** – Used for video processing and frame manipulation.  
-- **MTCNN** – Deep learning model for robust face detection.
+- **Python** – Used for scripting and automation.
+- **OpenCV** – Handles video processing and frame manipulation.  
+- **MTCNN** – Deep learning model that detects and highlights faces with high accuracy.
+- **NVIDIA DGX A100** – Provides high-performance AI computing for real-time processing.
 
 
 ## Installation and Setup  
