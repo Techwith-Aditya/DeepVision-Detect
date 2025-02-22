@@ -2,6 +2,7 @@
 
 ## Project Overview  
 This project processes an input video and detects human faces using **MTCNN (Multi-Task Cascaded Convolutional Networks)**. The detected faces are highlighted, and the processed video is saved for further analysis.  
+
 This project has been successfully deployed on an NVIDIA DGX A100 installed at my college, leveraging its powerful computational capabilities for efficient face detection.
 
 ## Applications  
