@@ -291,3 +291,81 @@ out.release()
 cv2.destroyAllWindows()
 
 print(f"Output saved as: {output_filename}")
+# _________________________________________________________________________________________________________________________________
+# 5th: Fixed Issue #5: Issue of having no Face Detection Confidence Threshold
+
+import cv2
+from mtcnn import MTCNN
+import argparse
+import os
+from datetime import datetime
+
+try:
+    detector = MTCNN()
+except Exception as e:
+    print(f"Error: Failed to initialize MTCNN detector. Details: {str(e)}")
+    print("Please ensure all dependencies (e.g., TensorFlow) are installed correctly.")
+    exit(1)
+
+# Set up argument parser for video file path, frame skipping, and confidence threshold
+parser = argparse.ArgumentParser(description="Detect faces in a video and save the output.")
+parser.add_argument("video_path", type=str, help="Path to the input video file")
+parser.add_argument("--skip-frames", type=int, default=0, help="Number of frames to skip between processing (default: 0, process every frame)")
+parser.add_argument("--confidence", type=float, default=0.9, help="Minimum confidence threshold for face detection (default: 0.9)")
+args = parser.parse_args()
+
+# Use the provided video path from command-line argument
+cap = cv2.VideoCapture(args.video_path)
+
+if not cap.isOpened():
+    print(f"Error: Video not found at {args.video_path}.")
+    exit()
+
+frame_width = int(cap.get(3))
+frame_height = int(cap.get(4))
+fps = int(cap.get(cv2.CAP_PROP_FPS))
+
+fourcc = cv2.VideoWriter_fourcc(*'mp4v')  
+base_output_filename = "output_classroom.mp4"
+
+# Check if the output file exists and generate a unique name if necessary
+if os.path.exists(base_output_filename):
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_filename = f"output_classroom_{timestamp}.mp4"
+else:
+    output_filename = base_output_filename
+
+out = cv2.VideoWriter(output_filename, fourcc, fps, (frame_width, frame_height))
+
+frame_count = 0  # Track the current frame number
+
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
+
+    frame_count += 1
+
+    # Process only if frame_count meets the skip-frames condition
+    if frame_count % (args.skip_frames + 1) == 0:
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        faces = detector.detect_faces(frame_rgb)
+
+        for face in faces:
+            # Filter faces based on confidence threshold
+            if face['confidence'] >= args.confidence:
+                x, y, w, h = face['box']
+                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+
+    out.write(frame)
+    cv2.imshow("Face Detection", frame)
+
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
+out.release()
+cv2.destroyAllWindows()
+
+print(f"Output saved as: {output_filename}")
+# _________________________________________________________________________________________________________________________________
