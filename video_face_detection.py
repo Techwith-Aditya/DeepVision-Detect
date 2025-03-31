@@ -723,3 +723,145 @@ try:
 except KeyboardInterrupt:
     logger.info("Processing stopped by keyboard interrupt (Ctrl+C)")
     cleanup(cap, out, "Processing stopped by keyboard interrupt")
+# _________________________________________________________________________________________________________________________________
+# 10TH: Fixed issue #10: Now the code checks if the video’s size and speed are valid before starting
+
+import cv2
+from mtcnn import MTCNN
+import argparse
+import os
+from datetime import datetime
+import logging
+import sys
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('face_detection.log'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
+
+def cleanup(cap, out, message="Processing completed"):
+    """Clean up resources and exit gracefully."""
+    cap.release()
+    out.release()
+    cv2.destroyAllWindows()
+    logger.info(f"{message}. Total faces detected: {faces_detected_total}")
+    logger.info(f"Output saved as: {output_filename}")
+    sys.exit(0)
+
+try:
+    detector = MTCNN()
+    logger.info("MTCNN detector initialized successfully")
+except Exception as e:
+    logger.error(f"Failed to initialize MTCNN detector: {str(e)}")
+    logger.error("Please ensure all dependencies (e.g., TensorFlow) are installed correctly")
+    exit(1)
+
+# Set up argument parser with codec option
+parser = argparse.ArgumentParser(description="Detect faces in a video and save the output.")
+parser.add_argument("video_path", type=str, help="Path to the input video file")
+parser.add_argument("--skip-frames", type=int, default=0, help="Number of frames to skip between processing (default: 0)")
+parser.add_argument("--confidence", type=float, default=0.9, help="Minimum confidence threshold for face detection (default: 0.9)")
+parser.add_argument("--codec", type=str, default='mp4v', help="FourCC codec for output video (e.g., mp4v, xvid, h264) (default: mp4v)")
+args = parser.parse_args()
+
+# Video setup
+cap = cv2.VideoCapture(args.video_path)
+if not cap.isOpened():
+    logger.error(f"Video not found at {args.video_path}")
+    exit()
+
+# Validate video properties
+frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+fps = int(cap.get(cv2.CAP_PROP_FPS))
+total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+if frame_width <= 0 or frame_height <= 0:
+    logger.error(f"Invalid video dimensions: width={frame_width}, height={frame_height}")
+    cap.release()
+    exit()
+if fps <= 0:
+    logger.error(f"Invalid frame rate: fps={fps}")
+    cap.release()
+    exit()
+if total_frames <= 0:
+    logger.error(f"Invalid frame count: total_frames={total_frames}")
+    cap.release()
+    exit()
+
+# Use the user-specified codec
+fourcc = cv2.VideoWriter_fourcc(*args.codec.upper())
+base_output_filename = "output_classroom.mp4"
+
+# Generate unique output filename
+if os.path.exists(base_output_filename):
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_filename = f"output_classroom_{timestamp}.mp4"
+else:
+    output_filename = base_output_filename
+
+out = cv2.VideoWriter(output_filename, fourcc, fps, (frame_width, frame_height))
+if not out.isOpened():
+    logger.error(f"Failed to initialize video writer with codec '{args.codec}'. Try a different codec (e.g., xvid, h264).")
+    cap.release()
+    exit()
+
+logger.info(f"Processing video: {args.video_path}")
+logger.info(f"Using codec: {args.codec}")
+logger.info(f"Video properties: {frame_width}x{frame_height}, {fps} fps, {total_frames} frames")
+logger.info(f"Output will be saved as: {output_filename}")
+
+frame_count = 0
+faces_detected_total = 0
+
+try:
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            cleanup(cap, out)
+            break
+
+        frame_count += 1
+        
+        # Show progress every 100 frames or at the start
+        if frame_count % 100 == 0 or frame_count == 1:
+            progress = (frame_count / total_frames) * 100
+            logger.info(f"Processing frame {frame_count}/{total_frames} ({progress:.1f}%)")
+
+        # Process frames based on skip-frames argument
+        if frame_count % (args.skip_frames + 1) == 0:
+            try:
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                faces = detector.detect_faces(frame_rgb)
+                
+                faces_detected = 0
+                for face in faces:
+                    if face['confidence'] >= args.confidence:
+                        faces_detected += 1
+                        faces_detected_total += 1
+                        x, y, w, h = face['box']
+                        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                
+                if faces_detected > 0:
+                    logger.debug(f"Frame {frame_count}: Detected {faces_detected} faces")
+
+            except Exception as e:
+                logger.error(f"Error processing frame {frame_count}: {str(e)}")
+
+        out.write(frame)
+        cv2.imshow("Face Detection", frame)
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            cleanup(cap, out, "Processing interrupted by user (q pressed)")
+            break
+
+except KeyboardInterrupt:
+    logger.info("Processing stopped by keyboard interrupt (Ctrl+C)")
+    cleanup(cap, out, "Processing stopped by keyboard interrupt")
+# _________________________________________________________________________________________________________________________________
